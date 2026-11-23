@@ -13,6 +13,8 @@ Tanpa framework, tanpa dependensi, tanpa unduhan aset: seluruh game (model 3D, t
 
 <p align="center"><img src="docs/screenshots/gunung-potret.jpg" width="260" alt="Tanjakan Gunung, mode potret"></p>
 
+<p align="center"><img src="docs/screenshots/kendaraan-baru.jpg" width="640" alt="Skuter Listrik, Bajaj Oranye, Skateboard, Sepeda Kota"></p>
+
 ## Main sekarang
 
 Setelah diunggah ke GitHub, aktifkan **GitHub Pages** (lihat bagian [Deploy](#deploy-ke-github-pages)). Game bisa juga dibuka langsung dengan mengklik dua kali `index.html`; cukup koneksi internet untuk memuat font Fredoka dari Google Fonts (tanpa internet tetap jalan dengan font cadangan).
@@ -23,7 +25,7 @@ Setelah diunggah ke GitHub, aktifkan **GitHub Pages** (lihat bagian [Deploy](#de
   - 🌴 **Piala Nusantara:** Sawah Terasering, Pantai Kelapa, Tanjakan Gunung (menanjak ke puncak berkabut, hutan pinus, salju)
   - 🏙️ **Piala Jabodetabek:** Jakarta Malam (Monas, Bundaran HI, JPO, ondel-ondel), Margonda Depok (ruko, angkot, Tugu Belimbing, KRL lewat), Kampus UI (danau, Perpustakaan, Balairung, bikun, KRL)
 - **12 karakter** dengan keunggulan berbeda (kecepatan, akselerasi, kelincahan, tameng, drift, dan lain-lain)
-- **4 kendaraan:** Truk Gizi, Pickup Desa 4x4, Ojol Hijau, Kurir Oranye
+- **8 kendaraan**, masing-masing punya statistik dan bonus sendiri (lihat tabel di bawah)
 - **Mode:** Grand Prix, Balapan Cepat, Time Trial
 - **Mangga 🥭:** tiap mangga memberi poin dan mengisi NOS 10%. NOS ditahan untuk nitro. Skor juga datang dari drift, serangan, lap, dan posisi finis.
 - **Power-slide (drift)** bertingkat dengan turbo, start roket, papan turbo, dan rampa lompatan
@@ -31,7 +33,22 @@ Setelah diunggah ke GitHub, aktifkan **GitHub Pages** (lihat bagian [Deploy](#de
 - 7 pembalap AI dengan rubber banding
 - **Ramah HP:** kontrol sentuh berikon, mode lanskap dan potret, layar penuh, resolusi menyesuaikan performa
 - HUD sederhana yang tidak menutupi jalan, dengan satu satuan ukuran yang proporsional di semua layar
-- Musik dan efek suara dibangkitkan lewat Web Audio, tiap lintasan punya tema musik sendiri
+- Musik dan efek suara dibangkitkan lewat Web Audio, tiap lintasan punya tema musik sendiri; suara mesin berbeda untuk motor/truk, skuter listrik, bajaj, dan kendaraan tanpa mesin
+
+## Kendaraan
+
+| Kendaraan | Kecepatan | Akselerasi | Kelincahan | Bobot | Bonus |
+|---|:-:|:-:|:-:|:-:|---|
+| 🚚 Truk Gizi | 8 | 3 | 3 | 9 | - |
+| 🛻 Pickup Desa 4x4 | 6 | 5 | 5 | 6 | - |
+| 🛵 Ojol Hijau | 5 | 8 | 6 | 3 | - |
+| 🛵 Kurir Oranye | 4 | 6 | 9 | 2 | - |
+| 🛴 Skuter Listrik | 6 | 9 | 6 | 3 | Turbo bertahan 20% lebih lama |
+| 🛺 Bajaj Oranye | 5 | 4 | 6 | 7 | Tameng bertahan 30% lebih lama |
+| 🛹 Skateboard | 3 | 7 | 10 | 1 | Drift terisi 35% lebih cepat |
+| 🚲 Sepeda Kota | 3 | 6 | 8 | 2 | Keranjang menyedot mangga dari jarak 25% lebih jauh |
+
+Statistik akhir adalah gabungan kendaraan dan karakter yang dipilih.
 
 ## Kontrol
 

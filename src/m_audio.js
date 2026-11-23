@@ -71,14 +71,24 @@ const Sfx = (() => {
     item() { tone(1100, 0.08, 'square', 0.07); },
   };
   function play(n) { if (!ctx || muted) return; resume(); const f = lib[n]; if (f) f(); }
-  function engine(ratio, boosting, active) {
+  let engProf = '';
+  function engine(ratio, boosting, active, prof) {
     if (!eng) return;
-    const t = ctx.currentTime;
-    const base = 52 + ratio * 150 + (boosting ? 40 : 0);
+    const t = ctx.currentTime; prof = prof || 'eng';
+    if (prof !== engProf) {
+      engProf = prof;
+      eng.o1.type = prof === 'ev' ? 'sine' : prof === 'roll' ? 'triangle' : prof === 'put' ? 'square' : 'sawtooth';
+      eng.o2.type = prof === 'ev' ? 'triangle' : prof === 'roll' ? 'sine' : prof === 'put' ? 'sawtooth' : 'square';
+    }
+    let base, fc, vol, m2 = 0.5;
+    if (prof === 'ev') { base = 170 + ratio * 520 + (boosting ? 120 : 0); fc = 1400 + ratio * 2600; vol = 0.03 + ratio * 0.03; m2 = 1.5; }
+    else if (prof === 'roll') { base = 45 + ratio * 70; fc = 260 + ratio * 500; vol = 0.018 + ratio * 0.03; m2 = 1; }
+    else if (prof === 'put') { base = 38 + ratio * 95 + (boosting ? 30 : 0); fc = 300 + ratio * 800; vol = 0.055 + ratio * 0.045; }
+    else { base = 52 + ratio * 150 + (boosting ? 40 : 0); fc = 380 + ratio * 1200; vol = 0.05 + ratio * 0.05; }
     eng.o1.frequency.setTargetAtTime(base, t, 0.05);
-    eng.o2.frequency.setTargetAtTime(base * 0.5, t, 0.05);
-    eng.f.frequency.setTargetAtTime(380 + ratio * 1200, t, 0.08);
-    eng.g.gain.setTargetAtTime(active ? 0.05 + ratio * 0.05 : 0, t, 0.1);
+    eng.o2.frequency.setTargetAtTime(base * m2, t, 0.05);
+    eng.f.frequency.setTargetAtTime(fc, t, 0.08);
+    eng.g.gain.setTargetAtTime(active ? vol : 0, t, 0.1);
   }
   function skidv(v) { if (skid) skid.g.gain.setTargetAtTime(v * 0.1, ctx.currentTime, 0.05); }
   /* ---- music ---- */

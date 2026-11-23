@@ -330,7 +330,7 @@
   }
   function ensureBg() {
     if (!S.bg) {
-      const ents = []; const pat = [0, 1, 2, 3, 2, 0, 3, 1];
+      const ents = []; const pat = [0, 1, 2, 3, 4, 5, 6, 7];
       for (let i = 0; i < 8; i++) ents.push({ char: (i * 5 + 2) % CHARS.length, veh: pat[i] });
       S.bg = new Race(0, ents, { laps: 99, attract: true });
       S.bg.cdDur = 1.2;
@@ -377,7 +377,7 @@
         <div class="stats">${statRow('Kecepatan', clamp(5 + (c.speed || 0), 1, 10))}${statRow('Akselerasi', clamp(5 + (c.accel || 0), 1, 10))}${statRow('Kelincahan', clamp(5 + (c.handling || 0), 1, 10))}</div>`;
     } else if (S.step === 'veh') {
       $('sel-title').textContent = 'Pilih Kendaraan';
-      const icons = ['🚚', '🛻', '🛵', '🛵'], cols = ['#4f7bff', '#e8262e', '#18c04a', '#ff7a1a'];
+      const icons = ['🚚', '🛻', '🛵', '🛵', '🛴', '🛺', '🛹', '🚲'], cols = ['#4f7bff', '#e8262e', '#18c04a', '#ff7a1a', '#2b2d3a', '#ff6a1a', '#9a5cf0', '#e8d4a0'];
       VEHICLES.forEach((v, i) => {
         const el = document.createElement('div'); el.className = 'card' + (i === S.sel.veh ? ' sel' : '');
         el.innerHTML = `<div style="width:100%;max-width:150px;aspect-ratio:1;border-radius:12px;background:linear-gradient(135deg,${cols[i]},#16113d);display:flex;align-items:center;justify-content:center;font-size:clamp(40px,9vh,76px)">${icons[i]}</div><b>${v.name}</b><span>Bobot ${v.weight}/10</span>`;
@@ -385,7 +385,7 @@
         box.appendChild(el);
       });
       const v = VEHICLES[S.sel.veh], st = combinedStats();
-      info.innerHTML = `<div><div class="i-name">${v.name}</div><div class="i-sub">dikendarai ${CHARS[S.sel.char].name}</div><div class="i-desc">${v.desc}</div></div>
+      info.innerHTML = `<div><div class="i-name">${v.name}</div><div class="i-sub">dikendarai ${CHARS[S.sel.char].name}</div><div class="i-desc${v.perk ? ' hp' : ''}">${v.desc}</div>${v.perk ? `<div class="i-perk">★ ${v.perk}</div>` : ''}</div>
         <div class="stats">${statRow('Kecepatan', st.speed)}${statRow('Akselerasi', st.accel)}${statRow('Kelincahan', st.handling)}${statRow('Bobot', st.weight)}</div>`;
     } else if (S.step === 'cup') {
       $('sel-title').textContent = 'Pilih Piala';
@@ -452,10 +452,10 @@
   function makeRoster() {
     const pl = { char: S.sel.char, veh: S.sel.veh, human: true };
     if (S.mode === 'time') return [pl];
-    const list = [pl], vp = [1, 0, 3, 2, 3, 1, 0], off = Math.floor(Math.random() * 4);
+    const NV = VEHICLES.length, list = [pl], vp = [1, 0, 3, 2, 5, 7, 4], off = Math.floor(Math.random() * NV);
     const pool = CHARS.map((c, i) => i).filter(i => i !== S.sel.char);
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-    for (let i = 0; i < 7; i++) list.push({ char: pool[i % pool.length], veh: (vp[i] + off) % 4 });
+    for (let i = 0; i < 7; i++) list.push({ char: pool[i % pool.length], veh: (vp[i] + off) % NV });
     return list;
   }
   function beginFromSelect() {
@@ -706,7 +706,7 @@
       race.render();
       if (!S.resultsShown) updateHud(race);
       const k = race.human;
-      if (k && !S.paused) { Sfx.engine(clamp(Math.abs(k.speed) / 60, 0, 1.2), k.boostT > 0, race.phase !== 'countdown' || true); Sfx.skid(k.drift.on ? 1 : 0); }
+      if (k && !S.paused) { Sfx.engine(clamp(Math.abs(k.speed) / 60, 0, 1.2), k.boostT > 0, race.phase !== 'countdown' || true, VEHICLES[k.veh].snd); Sfx.skid(k.drift.on ? 1 : 0); }
       return;
     }
     // title / help / splash: attract race in the background

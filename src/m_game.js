@@ -5,6 +5,10 @@ const VEHICLES = [
   { id: 'pickup', name: 'Pickup Desa 4x4', desc: 'Pickup 4x4 serbaguna. Seimbang di semua sisi dan kuat saat bertabrakan.', speed: 6, accel: 5, handling: 5, weight: 6, lean: 1, leanAmt: 0.04 },
   { id: 'ojol', name: 'Ojol Hijau', desc: 'Motor matik pengantar kilat. Akselerasi ganas dan lincah menyalip celah sempit.', speed: 5, accel: 8, handling: 6, weight: 3, lean: -1, leanAmt: 0.3 },
   { id: 'kurir', name: 'Kurir Oranye', desc: 'Motor kurir ringan. Kelincahan terbaik, pas untuk drift panjang, tapi mudah tersenggol.', speed: 4, accel: 6, handling: 9, weight: 2, lean: -1, leanAmt: 0.34 },
+  { id: 'eskuter', name: 'Skuter Listrik', desc: 'Skuter listrik berjok yang senyap. Akselerasi instan dan lincah, tapi kecepatan puncaknya biasa saja.', perk: 'Turbo bertahan 20% lebih lama', speed: 6, accel: 9, handling: 6, weight: 3, lean: -1, leanAmt: 0.3, boost: 1.2, radius: 1.4, snd: 'ev' },
+  { id: 'bajaj', name: 'Bajaj Oranye', desc: 'Bajaj legendaris ibu kota. Badan kokoh dan susah digeser, tapi bukan jagoan kecepatan.', perk: 'Tameng bertahan 30% lebih lama', speed: 5, accel: 4, handling: 6, weight: 7, lean: 1, leanAmt: 0.04, shield: 1.3, radius: 1.8, snd: 'put' },
+  { id: 'skate', name: 'Skateboard', desc: 'Papan luncur super lincah. Paling jago menikung dan drift, tapi paling lambat dan paling ringan.', perk: 'Drift terisi 35% lebih cepat', speed: 3, accel: 7, handling: 10, weight: 1, lean: -1, leanAmt: 0.42, drift: 0.35, radius: 1.3, snd: 'roll' },
+  { id: 'sepeda', name: 'Sepeda Kota', desc: 'Sepeda krem berkeranjang bergaya klasik. Santai dan gesit, paling jago memungut mangga.', perk: 'Keranjang menyedot mangga dari jarak 25% lebih jauh', speed: 3, accel: 6, handling: 8, weight: 2, lean: -1, leanAmt: 0.3, mangoR: 1.25, radius: 1.5, snd: 'roll' },
 ];
 const CHARS = [
   { id: 'peci', name: 'Pak Peci', title: 'Sang Pemimpin', perk: 'Wibawa: perisai bertahan lebih lama.', speed: 1, accel: 0, handling: 0, shield: 1.5, color: '#c4161c' },
@@ -31,7 +35,7 @@ const GRAV = 42;
 const Assets = {
   tex: {}, pick: {}, vcache: {}, ccache: {}, tcache: {}, trcache: {},
   init() {
-    for (const n of ['facade', 'facadeDay', 'sign', 'banner', 'qmark', 'trukSide', 'pickupSide'])
+    for (const n of ['facade', 'facadeDay', 'sign', 'banner', 'qmark', 'trukSide', 'pickupSide', 'bajajSide'])
       this.tex[n] = Renderer.tex(TEXFN[n](), { repeat: n === 'facade' || n === 'facadeDay', mip: n === 'facade' || n === 'facadeDay' });
     const P = this.pick;
     P.mango = Renderer.mesh(PICK_BUILD.mango());
@@ -47,7 +51,7 @@ const Assets = {
     o.body = Renderer.mesh(d.body);
     o.glass = d.glass ? Renderer.mesh(d.glass) : null;
     o.decals = d.decals.map(x => Renderer.mesh(x.data, { tex: this.tex[x.tex] }));
-    o.wheels = d.wheels.map(w => ({ w, mesh: Renderer.mesh(wheelData(w.r, w.w, w.tire, w.hub)) }));
+    o.wheels = d.wheels.map(w => ({ w, mesh: Renderer.mesh(w.data || wheelData(w.r, w.w, w.tire, w.hub)) }));
     return this.vcache[id] = o;
   },
   char(id, kind) {
@@ -118,11 +122,12 @@ class Kart {
     this.topSpeed = 38 + this.st.speed * 1.8;
     this.accel = 14 + this.st.accel * 2.8;
     this.turn = 1.7 + this.st.handling * 0.15;
-    this.driftRate = 1 + (C.drift || 0);
+    this.driftRate = 1 + (C.drift || 0) + (V.drift || 0);
     this.spinMul = C.spin || 1;
-    this.boostDur = C.boost || 1;
-    this.shieldMul = C.shield || 1;
-    this.radius = V.id === 'truk' ? 2.3 : V.id === 'pickup' ? 2.2 : 1.5;
+    this.boostDur = (C.boost || 1) * (V.boost || 1);
+    this.shieldMul = (C.shield || 1) * (V.shield || 1);
+    this.mangoR = V.mangoR || 1;
+    this.radius = V.radius || (V.id === 'truk' ? 2.3 : V.id === 'pickup' ? 2.2 : 1.5);
     this.in = { steer: 0, thr: 0, brk: 0, hop: false, item: false, nos: false };
     this.ai = null;
     this.vis = { steer: 0, roll: 0, pitch: 0, spin: 0 };
@@ -588,7 +593,7 @@ class Race {
     for (const p of pu) {
       if (p.t > 0) { p.t -= dt; continue; }
       for (const k of this.karts) {
-        const dx = k.x - p.x, dz = k.z - p.z, r = p.kind === 'crate' ? 3.2 : 2.6;
+        const dx = k.x - p.x, dz = k.z - p.z, r = p.kind === 'crate' ? 3.2 : 2.6 * k.mangoR;
         if (dx * dx + dz * dz < r * r && Math.abs(k.y - p.y) < 3.5) {
           if (p.kind === 'mango') {
             if (k.mangga < 10) { k.mangga++; if (k.mangga === 10 && k.human) this.say('MANGGA PENUH!', 1.2, 'boost'); }
@@ -765,9 +770,10 @@ class Race {
       R.draw(w.mesh, m, o);
     }
     // driver
-    const sc = d.charScale, cm = Assets.char(CHARS[k.char].id, d.kind);
+    const sc = d.charScale, cm = Assets.char(CHARS[k.char].id, d.pose || d.kind);
     let dm = M.mul(base, M.trans(d.seat[0], d.seat[1] + (k.hopY > 0 ? 0 : Math.sin(this.t * 14 + k.id) * 0.01), d.seat[2]));
     dm = M.mul(dm, M.rotZ((d.kind === 'car' ? -k.vis.roll * 0.7 : k.vis.roll * 0.25) - k.steerS * 0.06)); dm = M.mul(dm, M.rotX(-0.04 * clamp(k.speed / 40, 0, 1)));
+    if (d.faceYaw) dm = M.mul(dm, M.rotY(d.faceYaw));
     dm = M.mul(dm, M.scale(sc, sc, sc));
     R.draw(cm, dm, o);
     if (v.glass) glass.push({ mesh: v.glass, m: base });

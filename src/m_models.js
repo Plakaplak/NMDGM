@@ -202,6 +202,31 @@ const TEXFN = {
     g.fillStyle = '#111'; g.font = '900 30px Impact, "Arial Black", sans-serif'; g.fillText('MERAH PUTIH', 84, 92);
     return c;
   },
+  /* generic door emblem for the orange bajaj (original design, no real registration marks) */
+  bajajSide() {
+    const c = mkCanvas(256, 192), g = c.getContext('2d');
+    g.fillStyle = '#e8561c'; g.fillRect(0, 0, 256, 192);
+    const rnd = mulberry32(21);
+    for (let i = 0; i < 28; i++) {
+      g.fillStyle = `rgba(${rnd() < 0.5 ? '120,40,10' : '255,160,100'},${0.05 + rnd() * 0.07})`;
+      g.beginPath(); g.ellipse(rnd() * 256, rnd() * 192, 8 + rnd() * 26, 4 + rnd() * 14, rnd() * 3, 0, TAU); g.fill();
+    }
+    g.save(); g.translate(128, 96);
+    for (let i = 0; i < 8; i++) {
+      g.save(); g.rotate(i * TAU / 8);
+      const gr = g.createLinearGradient(0, -92, 0, -38); gr.addColorStop(0, '#f6d51f'); gr.addColorStop(1, '#2fa04a');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(0, -38); g.bezierCurveTo(27, -52, 25, -78, 0, -92); g.bezierCurveTo(-25, -78, -27, -52, 0, -38); g.fill();
+      g.restore();
+    }
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(0, 0, 41, 0, TAU); g.fill();
+    g.strokeStyle = '#e8561c'; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 35, 0, TAU); g.stroke();
+    g.fillStyle = '#b02a12'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = '900 11px Impact, "Arial Black", sans-serif'; g.fillText('NUSANTARA', 0, -21);
+    g.font = '900 36px Impact, "Arial Black", sans-serif'; g.fillText('08', 0, 1);
+    g.font = '900 11px Impact, "Arial Black", sans-serif'; g.fillText('BAJAJ', 0, 25);
+    g.restore();
+    return c;
+  },
   fruitTag() { return TEXFN.qmark(); },
 };
 
@@ -213,6 +238,40 @@ function wheelData(r, w, tire, hub) {
   b.box(tire || 0x222228, [w + 0.05, r * 1.15, r * 0.16], [0, 0, 0]);
   b.box(0xffffff, [w + 0.06, r * 0.16, r * 0.8], [0, 0, 0]);
   return b.data();
+}
+
+/* solid small wheel (scooter / skate / bajaj): tire, rim, accent spokes, hub cap, optional brake disc */
+function wheelSolid(r, w, o) {
+  const b = new MB();
+  b.cyl(o.tire || 0x1b1b20, r, r, w, 14, [0, 0, 0], [0, 0, Math.PI / 2]);
+  b.cyl(o.rim || 0x2e3036, r * 0.64, r * 0.64, w + 0.03, 12, [0, 0, 0], [0, 0, Math.PI / 2]);
+  for (let i = 0; i < 3; i++) b.box(o.accent || 0xd8242a, [w + 0.045, r * 0.1, r * 1.0], [0, 0, 0], [i * Math.PI / 3, 0, 0]);
+  b.cyl(o.cap || o.accent || 0xd8242a, r * 0.22, r * 0.22, w + 0.06, 8, [0, 0, 0], [0, 0, Math.PI / 2]);
+  if (o.disc) b.cyl(0xc9ced6, r * 0.5, r * 0.5, 0.025, 14, [w / 2 + 0.03, 0, 0], [0, 0, Math.PI / 2]);
+  return b.data();
+}
+/* open spoked bicycle wheel: black tire ring, silver rim, thin spokes */
+function wheelSpoked(r, w, o) {
+  const b = new MB(), N = 20, tt = r * 0.09, rm = r - tt / 2, rr = r * 0.85;
+  for (let i = 0; i < N; i++) {
+    const a = (i + 0.5) / N * TAU;
+    b.box(o.tire, [w, tt, TAU * rm / N * 1.1], [0, rm * Math.cos(a), rm * Math.sin(a)], [a, 0, 0]);
+    b.box(o.rim, [w * 0.55, r * 0.075, TAU * rr / N * 1.1], [0, rr * Math.cos(a), rr * Math.sin(a)], [a, 0, 0]);
+  }
+  const sp = 16, s0 = r * 0.06, s1 = rr - r * 0.03;
+  for (let i = 0; i < sp; i++) {
+    const a = (i + 0.5) / sp * TAU, mid = (s0 + s1) / 2;
+    b.box(o.spoke, [w * 0.22, r * 0.032, s1 - s0], [0, mid * Math.cos(a), mid * Math.sin(a)], [a + Math.PI / 2, 0, 0]);
+  }
+  b.cyl(o.hub || 0xc9ced6, r * 0.09, r * 0.09, w + 0.05, 8, [0, 0, 0], [0, 0, Math.PI / 2]);
+  return b.data();
+}
+/* arc of boxes around a wheel centre (cy,cz); theta measured from +Y toward +Z (fenders, mudguards) */
+function arcBox(b, col, cx, cy, cz, R, t0, t1, n, w, t) {
+  for (let i = 0; i < n; i++) {
+    const a = t0 + (t1 - t0) * (i + 0.5) / n, L = Math.abs(t1 - t0) / n * R * 1.12;
+    b.box(col, [w, t, L], [cx, cy + R * Math.cos(a), cz + R * Math.sin(a)], [a, 0, 0]);
+  }
 }
 
 /* ===== vehicles ===== */
@@ -350,6 +409,210 @@ const VEH_BUILD = {
     return VEH_BUILD._scooter({ id: 'kurir', body: 0xf3efe6, trim: 0xd3281e, box: 0xff6a1a, boxTrim: 0xc24300, hub: 0xd3281e, r: 0.3 });
   },
 };
+
+/* ===== second vehicle set: electric kick-scooter with saddle, orange bajaj, skateboard, retro city bike ===== */
+Object.assign(VEH_BUILD, {
+  eskuter() {
+    const b = new MB(), BLK = 0x1b1c20, DK = 0x2a2b31, RED = 0xd8242a, SIL = 0xc9ced6;
+    // deck + grip
+    b.box(BLK, [0.44, 0.1, 1.22], [0, 0.34, 0.02]);
+    b.box(0x34353c, [0.36, 0.015, 0.95], [0, 0.398, 0.0]);
+    b.box(RED, [0.2, 0.05, 0.04], [0, 0.34, -0.61]);
+    // neck, fork, stem
+    b.box(BLK, [0.24, 0.26, 0.2], [0, 0.52, 0.66]);
+    for (const s of [-1, 1]) b.cylAxis(BLK, 0.035, 0.035, [s * 0.1, 0.27, 0.78], [s * 0.09, 0.66, 0.7], 6);
+    b.cylAxis(BLK, 0.05, 0.045, [0, 0.62, 0.68], [0, 1.46, 0.42], 8);
+    b.cylAxis(RED, 0.013, 0.013, [0.0, 0.75, 0.7], [0.0, 1.4, 0.5], 5);          // red brake cable
+    b.box(DK, [0.1, 0.08, 0.12], [0, 0.98, 0.58]);                                // folding latch
+    b.box(RED, [0.06, 0.05, 0.06], [0.07, 0.98, 0.58]);
+    // handlebar, grips, display
+    b.box(BLK, [0.6, 0.045, 0.045], [0, 1.46, 0.42]);
+    for (const s of [-1, 1]) {
+      b.cyl(BLK, 0.038, 0.038, 0.15, 8, [s * 0.33, 1.46, 0.42], [0, 0, Math.PI / 2]);
+      b.sph(RED, 0.032, [s * 0.415, 1.46, 0.42], null, 5, 4);
+    }
+    b.box(DK, [0.12, 0.045, 0.08], [0, 1.5, 0.43]);
+    b.cyl(0xb7bcc4, 0.04, 0.04, 0.05, 8, [0, 1.54, 0.43]);
+    b.limb(DK, [-0.26, 1.45, 0.42], [-0.34, 1.43, 0.56], 0.03, 0.03);
+    // fenders + tail light
+    arcBox(b, BLK, 0, 0.27, 0.78, 0.33, -0.35, 1.7, 7, 0.14, 0.025);
+    arcBox(b, BLK, 0, 0.27, -0.72, 0.33, 0.5, -1.9, 9, 0.16, 0.025);
+    b.box(0xff2b2b, [0.12, 0.06, 0.04], [0, 0.3, -1.06]);
+    // seat post (clamp, silver tube, spring) + two-tone saddle
+    b.box(BLK, [0.12, 0.1, 0.16], [0, 0.44, -0.22]);
+    b.cylAxis(SIL, 0.042, 0.042, [0, 0.49, -0.22], [0, 0.72, -0.22], 8);
+    for (let i = 0; i < 3; i++) b.cyl(i % 2 ? 0x3a3b42 : DK, 0.056, 0.056, 0.045, 8, [0, 0.75 + i * 0.045, -0.22]);
+    b.box(BLK, [0.26, 0.07, 0.4], [0, 0.985, -0.22]);
+    b.box(BLK, [0.14, 0.06, 0.2], [0, 0.98, 0.06]);
+    b.box(RED, [0.27, 0.072, 0.18], [0, 0.99, -0.38]);
+    b.limb(DK, [-0.1, 0.34, -0.3], [-0.16, 0.08, -0.4], 0.03, 0.03);               // kickstand
+    return {
+      id: 'eskuter', body: b.data(), glass: null, decals: [], kind: 'bike', lean: -1, leanAmt: 0.3, pose: 'scoot',
+      wheels: [
+        { pos: [0, 0.27, 0.78], r: 0.27, w: 0.14, front: true, data: wheelSolid(0.27, 0.14, { tire: 0x17171b, rim: 0x2c2d33, accent: RED }) },
+        { pos: [0, 0.27, -0.72], r: 0.27, w: 0.16, data: wheelSolid(0.27, 0.16, { tire: 0x17171b, rim: 0x2c2d33, accent: RED, disc: true }) }],
+      seat: [0, 0.93, -0.22], charScale: 0.74, exhaust: [0, 0.3, -1.1], len: 2.1, wid: 0.85, camH: 4.1, camD: 9.0,
+    };
+  },
+  bajaj() {
+    const b = new MB(), g = new MB();
+    const ORG = 0xe8561c, ORG2 = 0xc4430f, BLK = 0x23252a, CHR = 0xcfd3d8, BLUE = 0x2f7fd8, WHITE = 0xf2f2ee, DK = 0x3a3d44, BENCH = 0x7a2a1a;
+    // chassis + cab floor
+    b.box(DK, [1.25, 0.14, 3.1], [0, 0.56, -0.1]);
+    b.box(0x4a2418, [1.2, 0.06, 2.4], [0, 0.69, -0.5]);
+    // body walls (open cab)
+    for (const s of [-1, 1]) {
+      b.box(ORG, [0.07, 0.8, 2.6], [s * 0.615, 1.1, -0.25]);
+      b.box(CHR, [0.05, 0.04, 2.6], [s * 0.63, 1.52, -0.25]);
+    }
+    b.box(ORG, [1.3, 0.8, 0.07], [0, 1.1, -1.52]);
+    b.box(ORG, [1.3, 0.8, 0.07], [0, 1.1, 1.0]);
+    b.box(BLK, [1.34, 0.1, 1.0], [0, 1.3, -1.0]);                    // black flank stripe
+    b.box(BLUE, [1.34, 0.07, 1.6], [0, 0.78, -0.7]);                 // blue skirt
+    // nose, stripes, headlight, front fender
+    b.box(ORG, [1.0, 0.5, 0.9], [0, 1.1, 1.3]);
+    b.box(WHITE, [1.02, 0.07, 0.92], [0, 1.27, 1.3]);
+    b.box(WHITE, [1.02, 0.06, 0.92], [0, 1.1, 1.3]);
+    b.cyl(ORG2, 0.19, 0.19, 0.16, 12, [0, 1.12, 1.78], [Math.PI / 2, 0, 0]);
+    b.cyl(CHR, 0.2, 0.2, 0.03, 12, [0, 1.12, 1.86], [Math.PI / 2, 0, 0]);
+    b.cyl(0xfff1a8, 0.14, 0.14, 0.04, 12, [0, 1.12, 1.88], [Math.PI / 2, 0, 0]);
+    arcBox(b, ORG, 0, 0.36, 1.3, 0.43, -0.5, 1.9, 7, 0.5, 0.05);
+    for (const s of [-1, 1]) arcBox(b, DK, s * 0.78, 0.36, -0.9, 0.42, 1.0, -1.3, 7, 0.26, 0.04);
+    // steering
+    b.box(DK, [0.7, 0.06, 0.06], [0, 1.5, 1.28]);
+    b.cylAxis(DK, 0.04, 0.04, [0, 1.5, 1.28], [0, 1.2, 1.34], 6);
+    for (const s of [-1, 1]) b.sph(0x1a1a1e, 0.055, [s * 0.36, 1.5, 1.28], null, 5, 4);
+    // windshield frame
+    for (const s of [-1, 1]) {
+      b.cylAxis(ORG, 0.04, 0.04, [s * 0.5, 1.35, 1.5], [s * 0.5, 2.05, 1.15], 6);
+      b.box(DK, [0.07, 0.55, 0.07], [s * 0.6, 1.78, 0.15]);          // B pillar
+      b.box(ORG, [0.06, 0.06, 1.05], [s * 0.55, 2.05, 0.66]);         // open-top side rails
+      b.box(DK, [0.04, 0.18, 0.1], [s * 0.64, 1.9, 1.18]);            // mirror
+    }
+    b.box(ORG, [1.1, 0.08, 0.12], [0, 2.06, 1.15]);
+    g.box(0xa8dcff, [1.0, 0.78, 0.04], [0, 1.7, 1.325], [-0.46, 0, 0]);
+    // black vinyl canopy over the passenger bench, sloping down at the back
+    b.box(BLK, [1.5, 0.1, 0.93], [0, 2.05, -0.285]);
+    b.box(BLK, [1.5, 0.1, 0.95], [0, 1.8, -1.15], [-0.56, 0, 0]);
+    b.box(CHR, [1.54, 0.05, 0.07], [0, 1.52, -1.56]);
+    // seats
+    b.box(BENCH, [0.9, 0.14, 0.5], [0, 1.19, 0.45]);
+    b.box(BENCH, [0.9, 0.5, 0.1], [0, 1.45, 0.14]);
+    b.box(BENCH, [1.1, 0.16, 0.65], [0, 1.0, -1.05]);
+    b.box(BENCH, [1.1, 0.5, 0.1], [0, 1.3, -1.43]);
+    // rear lights, plate, exhaust
+    for (const s of [-1, 1]) b.box(0xd01818, [0.14, 0.14, 0.05], [s * 0.5, 1.15, -1.57]);
+    b.box(WHITE, [0.4, 0.18, 0.04], [0, 1.0, -1.58]);
+    b.cylAxis(CHR, 0.05, 0.05, [0.4, 0.55, -1.55], [0.42, 0.62, -1.9], 6);
+    // door emblem decal on both sides
+    const dR = new MB(), dL = new MB(), X = 0.656, yc = 1.14, hh = 0.36, z0 = 0.02, z1 = 0.98;
+    dR.quadN([[-X, yc - hh, z0], [-X, yc - hh, z1], [-X, yc + hh, z1], [-X, yc + hh, z0]], [-1, 0, 0], [1, 1, 1], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    dL.quadN([[X, yc - hh, z0], [X, yc - hh, z1], [X, yc + hh, z1], [X, yc + hh, z0]], [1, 0, 0], [1, 1, 1], [[1, 0], [0, 0], [0, 1], [1, 1]]);
+    const wo = { tire: 0x1b1b20, rim: 0xb04a22, accent: 0x7a3216, cap: 0x7a3216 };
+    return {
+      id: 'bajaj', body: b.data(), glass: g.data(), decals: [{ data: dR.data(), tex: 'bajajSide' }, { data: dL.data(), tex: 'bajajSide' }],
+      kind: 'car', lean: 1, leanAmt: 0.04, pose: 'bike',
+      wheels: [
+        { pos: [0, 0.36, 1.3], r: 0.36, w: 0.2, front: true, data: wheelSolid(0.36, 0.2, wo) },
+        { pos: [0.78, 0.36, -0.9], r: 0.36, w: 0.22, data: wheelSolid(0.36, 0.22, wo) },
+        { pos: [-0.78, 0.36, -0.9], r: 0.36, w: 0.22, data: wheelSolid(0.36, 0.22, wo) }],
+      seat: [0, 1.2, 0.45], charScale: 0.8, exhaust: [0.42, 0.6, -1.9], len: 3.5, wid: 1.8, camH: 4.9, camD: 10.6,
+    };
+  },
+  skate() {
+    const b = new MB(), SIL = 0xc9ced6;
+    // deck: black grip, maple edge, upturned nose and tail
+    b.box(0xc89458, [0.5, 0.035, 1.0], [0, 0.235, 0]);
+    b.box(0x1c1c20, [0.48, 0.02, 1.0], [0, 0.262, 0]);
+    for (const s of [-1, 1]) {
+      b.box(0xc89458, [0.5, 0.035, 0.3], [0, 0.275, s * 0.62], [-s * 0.38, 0, 0]);
+      b.box(0x1c1c20, [0.48, 0.02, 0.3], [0, 0.3, s * 0.62], [-s * 0.38, 0, 0]);
+      // trucks
+      b.box(SIL, [0.17, 0.05, 0.2], [0, 0.205, s * 0.42]);
+      b.cyl(SIL, 0.025, 0.025, 0.46, 6, [0, 0.14, s * 0.42], [0, 0, Math.PI / 2]);
+      b.box(0xe86a1a, [0.1, 0.03, 0.1], [0, 0.225, s * 0.42]);
+    }
+    const wd = wheelSolid(0.13, 0.12, { tire: 0xf2eee4, rim: 0xd8d2c4, accent: 0x2a2a2a, cap: 0x2a2a2a });
+    return {
+      id: 'skate', body: b.data(), glass: null, decals: [], kind: 'bike', lean: -1, leanAmt: 0.42, pose: 'skate', faceYaw: 1.15,
+      wheels: [
+        { pos: [0.28, 0.13, 0.42], r: 0.13, w: 0.12, front: true, data: wd }, { pos: [-0.28, 0.13, 0.42], r: 0.13, w: 0.12, front: true, data: wd },
+        { pos: [0.28, 0.13, -0.42], r: 0.13, w: 0.12, data: wd }, { pos: [-0.28, 0.13, -0.42], r: 0.13, w: 0.12, data: wd }],
+      seat: [0, 0.9, 0], charScale: 0.76, exhaust: [0, 0.2, -0.9], len: 1.7, wid: 0.62, camH: 3.6, camD: 7.8,
+    };
+  },
+  sepeda() {
+    const b = new MB(), CREAM = 0xe8d9b4, BRN = 0x7b4a26, COP = 0xb5683f, CHR = 0xd6dade, DK = 0x2b2b30;
+    const BB = [0, 0.46, -0.1];
+    // loop frame: swept-down tube from the head tube to the bottom bracket, upper curved tube, seat tube, stays
+    const tube = (col, r, pts) => { for (let i = 0; i < pts.length - 1; i++) b.cylAxis(col, r, r, pts[i], pts[i + 1], 6); };
+    tube(CREAM, 0.034, [[0, 0.92, 0.6], [0, 0.72, 0.44], [0, 0.55, 0.24], BB]);
+    tube(CREAM, 0.028, [[0, 1.03, 0.58], [0, 0.88, 0.46], [0, 0.8, 0.22], [0, 0.82, -0.08], [0, 0.88, -0.32]]);
+    b.cylAxis(CREAM, 0.034, 0.034, BB, [0, 0.9, -0.34], 6);
+    b.cylAxis(CREAM, 0.042, 0.042, [0, 0.9, 0.62], [0, 1.12, 0.55], 7);
+    for (const s of [-1, 1]) {
+      b.cylAxis(CREAM, 0.02, 0.02, [s * 0.06, 0.46, -0.1], [s * 0.07, 0.5, -0.82], 5);
+      b.cylAxis(CREAM, 0.018, 0.018, [s * 0.05, 0.88, -0.33], [s * 0.07, 0.5, -0.82], 5);
+      b.cylAxis(CHR, 0.024, 0.02, [s * 0.07, 0.5, 0.82], [s * 0.06, 0.96, 0.6], 6);
+    }
+    b.box(CREAM, [0.16, 0.04, 0.06], [0, 0.97, 0.61]);
+    // handlebar, grips, bell, lamp
+    b.cylAxis(CHR, 0.03, 0.03, [0, 1.1, 0.56], [0, 1.2, 0.5], 6);
+    for (const s of [-1, 1]) {
+      b.limb(CHR, [0, 1.22, 0.5], [s * 0.3, 1.22, 0.3], 0.03, 0.03);
+      b.cyl(BRN, 0.042, 0.042, 0.16, 8, [s * 0.37, 1.22, 0.28], [0, 0, Math.PI / 2]);
+    }
+    b.sph(CHR, 0.045, [-0.14, 1.27, 0.5], null, 6, 4);
+    b.cyl(CHR, 0.06, 0.06, 0.1, 8, [0, 1.2, 0.66], [Math.PI / 2, 0, 0]);
+    b.cyl(0xfff3b0, 0.045, 0.045, 0.03, 8, [0, 1.2, 0.72], [Math.PI / 2, 0, 0]);
+    // wire basket with two mangoes
+    const bx = 0.23, bz0 = 0.75, bz1 = 1.09, by0 = 1.15, by1 = 1.41;
+    b.box(0x8f4b2c, [0.44, 0.015, 0.32], [0, by0, 0.92]);
+    for (const y of [by1, 1.28]) {
+      b.box(COP, [0.48, 0.022, 0.022], [0, y, bz1]); b.box(COP, [0.48, 0.022, 0.022], [0, y, bz0]);
+      for (const s of [-1, 1]) b.box(COP, [0.022, 0.022, 0.34], [s * bx, y, 0.92]);
+    }
+    for (const x of [-0.17, -0.057, 0.057, 0.17]) for (const z of [bz0, bz1]) b.box(COP, [0.014, by1 - by0, 0.014], [x, (by0 + by1) / 2, z]);
+    for (const s of [-1, 1]) for (const z of [0.83, 0.92, 1.01]) b.box(COP, [0.014, by1 - by0, 0.014], [s * bx, (by0 + by1) / 2, z]);
+    for (const s of [-1, 1]) b.cylAxis(CHR, 0.014, 0.014, [s * 0.15, by0, 0.9], [s * 0.05, 0.97, 0.66], 5);
+    b.sph(0xffb21a, [0.1, 0.13, 0.1], [0.08, 1.3, 0.9], [0, 0.4, 0], 8, 6);
+    b.sph(0xf79a14, [0.1, 0.13, 0.1], [-0.08, 1.29, 0.96], [0, -0.5, 0], 8, 6);
+    b.sph(0x2fa04a, [0.05, 0.02, 0.03], [0.08, 1.44, 0.9], null, 5, 3);
+    // saddle on springs, brown rear pad with rack
+    b.box(BRN, [0.2, 0.07, 0.3], [0, 1.0, -0.36]);
+    b.box(BRN, [0.3, 0.07, 0.17], [0, 1.0, -0.5]);
+    b.box(BRN, [0.09, 0.06, 0.14], [0, 0.995, -0.2]);
+    for (const s of [-1, 1]) b.cyl(CHR, 0.03, 0.03, 0.08, 6, [s * 0.07, 0.94, -0.42]);
+    b.cylAxis(CHR, 0.022, 0.022, [0, 0.9, -0.34], [0, 0.97, -0.36], 6);
+    b.box(BRN, [0.26, 0.06, 0.5], [0, 1.12, -0.86]);
+    for (const s of [-1, 1]) {
+      b.box(CHR, [0.02, 0.02, 0.5], [s * 0.12, 1.07, -0.86]);
+      b.cylAxis(CHR, 0.012, 0.012, [s * 0.12, 1.07, -1.08], [s * 0.07, 0.5, -0.82], 5);
+      b.cylAxis(CHR, 0.012, 0.012, [s * 0.12, 1.07, -0.64], [s * 0.07, 0.5, -0.82], 5);
+    }
+    // chain case + crank emblem, cranks, pedals
+    b.box(CREAM, [0.045, 0.17, 0.74], [0.115, 0.49, -0.46]);
+    b.cyl(CREAM, 0.17, 0.17, 0.05, 12, [0.115, 0.46, -0.1], [0, 0, Math.PI / 2]);
+    b.cyl(0xc65a28, 0.1, 0.1, 0.06, 10, [0.125, 0.46, -0.1], [0, 0, Math.PI / 2]);
+    b.cyl(0xf2e6c8, 0.045, 0.045, 0.07, 8, [0.13, 0.46, -0.1], [0, 0, Math.PI / 2]);
+    b.cylAxis(CHR, 0.022, 0.02, [0.16, 0.46, -0.1], [0.22, 0.28, -0.1], 5);
+    b.cylAxis(CHR, 0.022, 0.02, [-0.12, 0.46, -0.1], [-0.18, 0.64, -0.1], 5);
+    b.box(DK, [0.14, 0.035, 0.1], [0.26, 0.27, -0.1]);
+    b.box(DK, [0.14, 0.035, 0.1], [-0.22, 0.65, -0.1]);
+    // mudguards, rear light
+    arcBox(b, CREAM, 0, 0.5, 0.82, 0.58, -0.35, 1.9, 9, 0.12, 0.025);
+    arcBox(b, CREAM, 0, 0.5, -0.82, 0.58, 0.45, -1.7, 9, 0.12, 0.025);
+    b.box(0xd01818, [0.08, 0.06, 0.04], [0, 0.52, -1.4]);
+    const wo = { tire: 0x15151a, rim: 0xe7eaee, spoke: 0xdfe3e8 };
+    return {
+      id: 'sepeda', body: b.data(), glass: null, decals: [], kind: 'bike', lean: -1, leanAmt: 0.3, pose: 'cycle',
+      wheels: [
+        { pos: [0, 0.5, 0.82], r: 0.5, w: 0.07, front: true, data: wheelSpoked(0.5, 0.07, wo) },
+        { pos: [0, 0.5, -0.82], r: 0.5, w: 0.08, data: wheelSpoked(0.5, 0.08, wo) }],
+      seat: [0, 0.93, -0.36], charScale: 0.74, exhaust: [0, 0.5, -1.4], len: 2.7, wid: 0.9, camH: 4.1, camD: 9.2,
+    };
+  },
+});
 
 /* ===== characters (original cartoon avatars) — origin at hips, +Z forward ===== */
 const CHAR_BUILD = (id, kind) => {
@@ -516,15 +779,41 @@ const CHAR_BUILD = (id, kind) => {
   }
   // arms
   const sh = 0.3;
+  /* extra riding poses: s = +1 is the +x side of the rider */
+  const SKY = 1.15, skS = Math.sin(SKY), skC = Math.cos(SKY);
+  const toL = (wx, y, wz) => [wx * skC - wz * skS, y, wx * skS + wz * skC];   // board space -> rider space (rider is yawed by faceYaw)
+  const POSES = {
+    scoot: {
+      hand: s => [s * 0.3, 0.74, 0.84], elbow: s => [s * 0.42, 0.55, 0.45],
+      leg: s => [[s * 0.2, 0.02, 0.05], [s * 0.24, -0.2, 0.46], [s * 0.22, -0.7, 0.62]],
+    },
+    cycle: {
+      hand: s => [s * 0.4, 0.38, 0.84], elbow: s => [s * 0.42, 0.45, 0.45],
+      leg: s => s > 0 ? [[0.15, 0.02, 0.05], [0.2, -0.38, 0.45], [0.35, -0.81, 0.35]] : [[-0.15, 0.02, 0.05], [-0.2, -0.05, 0.62], [-0.3, -0.3, 0.35]],
+    },
+    skate: {
+      hand: s => s > 0 ? [0.82, 0.52, 0.06] : [-0.74, 0.32, 0.14], elbow: s => s > 0 ? [0.55, 0.58, 0.02] : [-0.5, 0.5, 0.06],
+      leg: s => { const hip = [s * 0.15, 0.02, 0], foot = toL(0, -0.8, -s * 0.42); return [hip, [(hip[0] + foot[0]) / 2, -0.38, (hip[2] + foot[2]) / 2 + 0.3], foot]; },
+    },
+  };
+  const PO = POSES[kind];
   for (const s of [-1, 1]) {
-    const S = [s * sh, 0.56, 0], hand = bike ? [s * 0.34, 0.33, 0.98] : [s * 0.2, 0.38, 0.46];
-    const E = bike ? [s * 0.4, 0.42, 0.5] : [s * 0.34, 0.34, 0.2];
+    const S = [s * sh, 0.56, 0];
+    const hand = PO ? PO.hand(s) : bike ? [s * 0.34, 0.33, 0.98] : [s * 0.2, 0.38, 0.46];
+    const E = PO ? PO.elbow(s) : bike ? [s * 0.4, 0.42, 0.5] : [s * 0.34, 0.34, 0.2];
     b.limb(sleeve, S, E, 0.14, 0.14);
     b.limb(rolled ? def.skin : sleeve, E, hand, 0.12, 0.12);
     b.sph(def.skin, 0.075, hand, null, 6, 4);
-    if (!bike) { /* steering wheel */ }
   }
-  if (bike) {
+  if (PO) {
+    const pant = def.suit === 0xf7f7f7 ? 0x30343c : def.suit;
+    for (const s of [-1, 1]) {
+      const [hip, knee, foot] = PO.leg(s);
+      b.limb(pant, hip, knee, 0.17, 0.17);
+      b.limb(pant, knee, foot, 0.15, 0.15);
+      b.box(0x222226, [0.14, 0.08, 0.28], [foot[0], foot[1] - 0.03, foot[2] + 0.06]);
+    }
+  } else if (bike) {
     for (const s of [-1, 1]) {
       b.limb(def.suit === 0xf7f7f7 ? 0x30343c : def.suit, [s * 0.2, 0.02, 0.05], [s * 0.26, -0.12, 0.5], 0.17, 0.17);
       b.limb(def.suit === 0xf7f7f7 ? 0x30343c : def.suit, [s * 0.26, -0.12, 0.5], [s * 0.26, -0.6, 0.62], 0.15, 0.15);
